@@ -1,0 +1,25 @@
+package proto_go;
+
+enum MsgId {
+	REQUEST_MATCH = 1; //请求匹配
+	MATCH_RESULT = 2;  // 比赛结果下发
+}
+
+//请求匹配
+message RequestMatch{
+	required int32 UId = 1;//玩家账号id
+	required int32 Score = 2;//玩家的分数
+}
+
+//比赛结果下发
+message MatchResult{
+	required bool IsTeam1Win = 1;//是否队伍1获胜
+	repeated Player Team1 = 2;//队伍1的信息
+	repeated Player Team2 = 3;//队伍2的信息
+}
+
+//玩家
+message Player{
+	required int32 UId = 1;//玩家账号id
+	required int32 Score = 2;//玩家的分数
+}
