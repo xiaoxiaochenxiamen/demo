@@ -4,9 +4,9 @@ import (
 	"proto_go"
 )
 
-var HubChan = newHubChan()
+var HubChan = NewHubChan()
 
-func newHubChan() chan *ClientPacket {
+func NewHubChan() chan *ClientPacket {
 	return make(chan *ClientPacket, 1024)
 }
 
@@ -17,7 +17,7 @@ func InitHub() {
 func clientHub() {
 	for {
 		packet := <-HubChan
-		switch packet.id {
+		switch packet.Id {
 		case testPB.MsgId_REQUEST_MATCH:
 			handleRequsetMatch(packet)
 		default:
@@ -26,13 +26,13 @@ func clientHub() {
 }
 
 type ClientPacket struct {
-	id   testPB.MsgId
-	buff []byte
+	Id   testPB.MsgId
+	Buff []byte
 }
 
-func newClientPacket(id int32, data []byte) *ClientPacket {
+func NewClientPacket(id int32, data []byte) *ClientPacket {
 	return &ClientPacket{
-		id:   testPB.MsgId(id),
-		buff: data,
+		Id:   testPB.MsgId(id),
+		Buff: data,
 	}
 }

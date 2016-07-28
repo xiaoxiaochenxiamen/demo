@@ -19,6 +19,10 @@ const (
 var TeamOne = []int{8, 7, 4, 3, 1}
 var TeamTwo = []int{9, 6, 5, 2, 0}
 
+func InitMatch() {
+	go matchTimeScanf()
+}
+
 func matchTimeScanf() {
 	tick := time.NewTicker(MatchScanf)
 	for {
@@ -69,7 +73,7 @@ func (m *MatchPool) len() int {
 var MatchServer = newMatchPool()
 
 func handleRequsetMatch(packet *ClientPacket) {
-	requst, err := proto_pb.ReadTestPBRequstMatch(packet.buff)
+	requst, err := proto_pb.ReadTestPBRequstMatch(packet.Buff)
 	if nil == err {
 		requsetMatch(requst.GetUId(), requst.GetScore())
 	}
@@ -98,7 +102,7 @@ func (a ByScore) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByScore) Less(i, j int) bool { return a[i].Score < a[j].Score }
 
 func matchTeam(byScore []*PlayerMatch) {
-	l := len(byScore)
+	l := len(byScore) - MatchMin + 1
 	for i := 0; i < l; {
 		if byScore[i+MatchMin-1].Score-byScore[i].Score > MatchScoreMax {
 			i++

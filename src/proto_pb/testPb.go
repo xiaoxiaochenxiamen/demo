@@ -17,10 +17,16 @@ func ReadTestPBRequstMatch(buff []byte) (requst *testPB.RequestMatch, err error)
 	return
 }
 
-func write(data []byte) []byte {
+func ReadTestPBMatchResult(buff []byte) (result *testPB.MatchResult, err error) {
+	result = &testPB.MatchResult{}
+	err = proto.Unmarshal(buff, result)
+	return
+}
+
+func write(id testPB.MsgId, data []byte) []byte {
 	dataLen := int32(len(data))
 	buffLen := utils.EncodeInt32(dataLen + int32(PacketHeadLen))
-	packetId := utils.EncodeInt32(int32(testPB.MsgId_MATCH_RESULT))
+	packetId := utils.EncodeInt32(int32(id))
 	var buff bytes.Buffer
 	buff.Write(buffLen)
 	buff.Write(packetId)
@@ -33,7 +39,7 @@ func WriteTestPBMatchResult(result *testPB.MatchResult) ([]byte, error) {
 	if nil != err {
 		return nil, err
 	} else {
-		return write(data), nil
+		return write(testPB.MsgId_MATCH_RESULT, data), nil
 	}
 }
 
@@ -46,6 +52,6 @@ func WriteTestPBRequstMatch(userId int32, score int32) ([]byte, error) {
 	if nil != err {
 		return nil, err
 	} else {
-		return write(data), nil
+		return write(testPB.MsgId_REQUEST_MATCH, data), nil
 	}
 }

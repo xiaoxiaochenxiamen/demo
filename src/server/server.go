@@ -17,6 +17,8 @@ const (
 var ClientCon *net.TCPConn
 
 func StartServer() {
+	InitHub()
+	InitMatch()
 	listen, ok := listenTcp()
 	if ok {
 		accept(listen)
@@ -47,7 +49,7 @@ func accept(listen *net.TCPListener) {
 		if nil == err {
 			tcpCon.SetKeepAlive(true)
 			ClientCon = tcpCon
-			go handleCon(tcpCon)
+			go HandleCon(tcpCon, HubChan)
 		}
 	}
 }
@@ -68,7 +70,7 @@ func (c *ConBuff) hasPacket() bool {
 	}
 }
 
-func newConBuff() *ConBuff {
+func NewConBuff() *ConBuff {
 	conBuff := &ConBuff{
 		expect:     8,
 		isReadNext: false,
@@ -77,17 +79,30 @@ func newConBuff() *ConBuff {
 	return conBuff
 }
 
-func handleCon(con *net.TCPConn) {
-	defer con.CloseRead()
-	buff := newConBuff()
+func HandleCon(con *net.TCPConn, hub chan *ClientPacket) {
+	buff := NewConBuff()
 	for {
 		temp := make([]byte, ConReadBuffSize)
 		n, err := con.Read(temp)
 		if nil == err && n > 0 {
-			buff.Write(temp)
-			if buff.hasPacket() {
-				buff.readPacket()
+			if ConReadBuffSize == n {
+				buff.Write(temp)
+			} else {
+				buff.Write(temp[:n])
 			}
+			if buff.hasPacket() {
+				buff.readPacket(hub)
+			}
+		}
+	}
+}
+
+func (c *ConBuff) readPacket(hub chan *ClientPacket) {
+	for c.hasPacket() {
+		if c.isReadNext {
+			c.readPacketData(hub)
+		} else {
+			c.readPacketHead()
 		}
 	}
 }
@@ -95,30 +110,19 @@ func handleCon(con *net.TCPConn) {
 func (c *ConBuff) readPacketHead() {
 	expectCode := make([]byte, 4)
 	c.Read(expectCode)
-	c.expect = int(utils.DecodeInt32(expectCode))
-	fmt.Println(expectCode, c.expect)
+	c.expect = int(utils.DecodeInt32(expectCode)) - proto_pb.PacketHeadLen
 	packetIdCode := make([]byte, 4)
 	c.Read(packetIdCode)
 	c.packeId = utils.DecodeInt32(packetIdCode)
 	c.isReadNext = true
 }
 
-func (c *ConBuff) readPacketData() {
+func (c *ConBuff) readPacketData(hub chan *ClientPacket) {
 	data := make([]byte, c.expect)
 	c.Read(data)
 	c.isReadNext = false
-	packet := newClientPacket(c.packeId, data)
-	HubChan <- packet
-}
-
-func (c *ConBuff) readPacket() {
-	for c.hasPacket() {
-		if c.isReadNext {
-			c.readPacketData()
-		} else {
-			c.readPacketHead()
-		}
-	}
+	packet := NewClientPacket(c.packeId, data)
+	hub <- packet
 }
 
 func sendMessageToClient(msg []byte) {

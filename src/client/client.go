@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"proto_go"
 	"proto_pb"
 	"server"
 	"strconv"
@@ -18,6 +19,7 @@ const (
 )
 
 var ClinetTcp *net.TCPConn
+var ClientHubChan = server.NewHubChan()
 
 type PlayerManager struct {
 	rw     *sync.RWMutex
@@ -50,6 +52,27 @@ func tcpConnet() {
 		panic(err)
 	}
 	ClinetTcp = tcpCon
+	go server.HandleCon(tcpCon, ClientHubChan)
+	go clientHub()
+
+}
+
+func clientHub() {
+	for {
+		packet := <-ClientHubChan
+		switch packet.Id {
+		case testPB.MsgId_MATCH_RESULT:
+			handleMatchResult(packet)
+		default:
+		}
+	}
+}
+
+func handleMatchResult(packet *server.ClientPacket) {
+	result, err := proto_pb.ReadTestPBMatchResult(packet.Buff)
+	if nil == err {
+		fmt.Println(result.GetIsTeam1Win(), result.GetTeam1(), result.GetTeam2())
+	}
 }
 
 func generateParams(stdParams string) []interface{} {
@@ -93,13 +116,13 @@ func StarClient() {
 	pos := 0
 	for {
 		line := <-stdIn
-		fmt.Println("[In] %v", line)
+		fmt.Printf("[In] %v\n", line)
 		info := strings.Split(line, " ")
 		if "exit" == info[0] {
 			fmt.Println("exit ok")
 			return
 		}
-		if "client" == info[0] {
+		if "client" == info[0] && 2 == len(info) {
 			num, err := strconv.Atoi(info[1])
 			if nil == err {
 				if num+pos > MaxClient {
@@ -109,11 +132,12 @@ func StarClient() {
 					pos = pos + num
 				}
 			} else {
-				fmt.Println("非法参数: %v", info[2])
+				fmt.Printf("非法参数: %v\n", line)
 				fmt.Println("键入 client 数量(空格隔开)    例: client 100")
 			}
+		} else {
+			fmt.Println("无效参数")
 		}
-
 	}
 }
 
