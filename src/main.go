@@ -1,11 +1,11 @@
 package main
 
 import (
-	"client"
+	// "client"
 	"server"
-	"time"
+	// "time"
 )
 
 func main() {
-
+	server.StartServer()
 }
