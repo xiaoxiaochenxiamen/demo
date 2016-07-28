@@ -63,6 +63,12 @@ func (m *MatchPool) insert(id int32, score int32) {
 	m.rw.Unlock()
 }
 
+func (m *MatchPool) delete(id int32) {
+	m.rw.Lock()
+	delete(m.player, id)
+	m.rw.Unlock()
+}
+
 func (m *MatchPool) len() int {
 	m.rw.Lock()
 	l := len(m.player)
@@ -117,14 +123,23 @@ func packetTeam(player []*PlayerMatch) {
 	team1 := make([]*testPB.Player, TeamPlayerMax)
 	team2 := make([]*testPB.Player, TeamPlayerMax)
 	for i := 0; i < TeamPlayerMax; i++ {
+		teamOnePos := TeamOne[i]
+		team1UserId := player[teamOnePos].UserId
+		team1Score := player[teamOnePos].Score
 		team1[i] = &testPB.Player{
-			UId:   &(player[TeamOne[i]].UserId),
-			Score: &(player[TeamOne[i]].Score),
+			UId:   &team1UserId,
+			Score: &team1Score,
 		}
+		MatchServer.delete(team1UserId)
+
+		teamTwoPos := TeamTwo[i]
+		team2UserId := player[teamTwoPos].UserId
+		team2Score := player[teamTwoPos].Score
 		team2[i] = &testPB.Player{
-			UId:   &(player[TeamTwo[i]].UserId),
-			Score: &(player[TeamTwo[i]].Score),
+			UId:   &team2UserId,
+			Score: &team2Score,
 		}
+		MatchServer.delete(team2UserId)
 	}
 	team1Win := (0 == utils.Rand()%2)
 	result := &testPB.MatchResult{

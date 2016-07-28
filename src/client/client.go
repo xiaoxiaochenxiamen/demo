@@ -10,7 +10,6 @@ import (
 	"server"
 	"strconv"
 	"strings"
-	"sync"
 	"utils"
 )
 
@@ -22,7 +21,6 @@ var ClinetTcp *net.TCPConn
 var ClientHubChan = server.NewHubChan()
 
 type PlayerManager struct {
-	rw     *sync.RWMutex
 	player map[int32]int32
 }
 
@@ -30,15 +28,12 @@ var AllPlayer = newAllPlayer()
 
 func newAllPlayer() *PlayerManager {
 	return &PlayerManager{
-		rw:     &sync.RWMutex{},
 		player: make(map[int32]int32),
 	}
 }
 
 func (p *PlayerManager) insert(id int32, score int32) {
-	p.rw.Lock()
 	p.player[id] = score
-	p.rw.Unlock()
 }
 
 func tcpConnet() {
@@ -110,35 +105,85 @@ func StdLines() <-chan string {
 func StarClient() {
 	tcpConnet()
 	fmt.Println("开始启动测试")
-	fmt.Println("键入 exit 退出测试")
-	fmt.Println("键入 client 数量(空格隔开)    例: client 100")
+	printHelp()
 	stdIn := StdLines()
 	pos := 0
 	for {
 		line := <-stdIn
 		fmt.Printf("[In] %v\n", line)
 		info := strings.Split(line, " ")
-		if "exit" == info[0] {
+
+		switch info[0] {
+
+		case "client":
+			pos = cmdPase(pos, info)
+		case "push":
+			pushAllUser()
+		case "exit":
 			fmt.Println("exit ok")
 			return
-		}
-		if "client" == info[0] && 2 == len(info) {
-			num, err := strconv.Atoi(info[1])
-			if nil == err {
-				if num+pos > MaxClient {
-					fmt.Println("超过最大测试数量")
-				} else {
-					addClient(int32(pos), int32(pos+num))
-					pos = pos + num
-				}
-			} else {
-				fmt.Printf("非法参数: %v\n", line)
-				fmt.Println("键入 client 数量(空格隔开)    例: client 100")
-			}
-		} else {
+		case "help":
+			printHelp()
+		default:
 			fmt.Println("无效参数")
+			printHelp()
 		}
 	}
+}
+
+func pushAllUser() {
+	for userId, score := range AllPlayer.player {
+		requstMatch(userId, score)
+	}
+}
+
+func cmdPase(pos int, info []string) int {
+	switch len(info) {
+	case 2:
+		pos = cmdPaseClient2(pos, info)
+	case 3:
+		pos = cmdPaseClient3(pos, info)
+	default:
+		printHelp()
+	}
+	return pos
+}
+
+func cmdPaseClient2(pos int, info []string) int {
+	num, err := strconv.Atoi(info[1])
+	if nil == err {
+		if num+pos > MaxClient {
+			fmt.Println("超过最大测试数量: ", MaxClient)
+		} else {
+			addClient(int32(pos), int32(pos+num))
+			pos = pos + num
+		}
+	} else {
+		printHelp()
+	}
+	return pos
+}
+func cmdPaseClient3(pos int, info []string) int {
+	uid, err := strconv.Atoi(info[1])
+	if nil == err {
+		score, err := strconv.Atoi(info[2])
+		if nil == err {
+			requstMatch(int32(uid), int32(score))
+			pos = pos + 1
+		} else {
+			printHelp()
+		}
+	} else {
+		printHelp()
+	}
+	return pos
+}
+
+func printHelp() {
+	fmt.Println("键入 client [number](空格隔开)            例: client 100   ------ 新增100个测试用户")
+	fmt.Println("键入 client [UserId] [Score](空格隔开)    例: client 1 20  ------ 新增/设置 单个用户积分")
+	fmt.Println("键入 push            ------------------------------------------ 全部测试用户匹配")
+	fmt.Println("键入 exit            ------------------------------------------ 退出测试")
 }
 
 func addClient(start int32, end int32) {
