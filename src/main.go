@@ -1,11 +1,13 @@
 package main
 
 import (
-	// "client"
+	"client"
 	"server"
-	// "time"
+	"time"
 )
 
 func main() {
-	server.StartServer()
+	go server.StartServer()
+	time.Sleep(1 * time.Second)
+	client.StarClient()
 }

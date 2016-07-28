@@ -69,11 +69,10 @@ func (c *ConBuff) hasPacket() bool {
 }
 
 func newConBuff() *ConBuff {
-	buff := make([]byte, 0, 4096)
 	conBuff := &ConBuff{
 		expect:     8,
 		isReadNext: false,
-		Buffer:     bytes.NewBuffer(buff),
+		Buffer:     &bytes.Buffer{},
 	}
 	return conBuff
 }
@@ -97,6 +96,7 @@ func (c *ConBuff) readPacketHead() {
 	expectCode := make([]byte, 4)
 	c.Read(expectCode)
 	c.expect = int(utils.DecodeInt32(expectCode))
+	fmt.Println(expectCode, c.expect)
 	packetIdCode := make([]byte, 4)
 	c.Read(packetIdCode)
 	c.packeId = utils.DecodeInt32(packetIdCode)
